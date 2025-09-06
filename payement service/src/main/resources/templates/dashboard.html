@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .mode-buttons { margin-bottom: 20px; }
+        .mode-buttons button { margin-right: 10px; padding: 10px 20px; }
+        .cards { display: flex; gap: 20px; margin-bottom: 20px; }
+        .card { background-color: #f5f5f5; padding: 20px; border-radius: 10px; flex: 1; text-align: center; }
+        .charts { display: flex; gap: 50px; margin-bottom: 20px; }
+        .chart-container { width: 50%; }
+        .logs { background-color: #000; color: #0f0; padding: 10px; height: 200px; overflow-y: auto; border-radius: 5px; }
+        .error-log {
+            color: red;
+            font-weight: bold;
+        }
+
+        .warn-log {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .info-log {
+            color: #0f0; /* vert par défaut pour coller avec ton fond noir */
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>Dashboard Admin - Performance Kafka</h1>
+<h3>veuillez actualiser la page pour voir les updates</h3>
+<h4>Etat du Listnner mode batch:  <span th:text="${batchListnnerStatus}">Inactive</span></h4>
+<h4>Etat du Listnner mode single:  <span th:text="${singleListnnerStatus}">Inactive</span></h4>
+<h4>Lever une exception SocketTimeoutException au record 60:  <span th:text="${throwExceptionStatus}">Inactive</span></h4>
+<div class="mode-buttons">
+    <button onclick="switchMode('batch')">Activer le Listnner Mode Batch</button>
+    <button onclick="switchMode('single')">Activer le Listnner Mode Single</button>
+    <button onclick="switchMode('arreter')">Arreter les deux Listnner</button>
+    <button onclick="simulateException()">Lever une exception SocketTimeoutException au record 60 </button>
+</div>
+
+<h2>Statistiques Batch</h2>
+<div class="cards">
+    <div class="card" id="batch-count">Messages reçus: 0</div>
+    <div class="card" id="batch-time">Temps traitement: 0 ms</div>
+</div>
+<div class="charts">
+    <div class="chart-container">
+        <canvas id="batchChart"></canvas>
+    </div>
+</div>
+
+<h2>Statistiques Single</h2>
+<div class="cards">
+    <div class="card" id="single-time">Temps pour 100 messages: <span th:text="${tempsTraitementSingle}">0</span> ms</div>
+</div>
+<div class="charts">
+    <div class="chart-container">
+        <canvas id="singleChart"></canvas>
+    </div>
+</div>
+
+<h2>Logs du traitement</h2>
+<div class="logs" id="logs">
+    <div th:each="log : ${logs}">
+        <span th:classappend="${log.niveau == 'ERROR'} ? 'error-log'
+                           : (${log.niveau == 'WARN'} ? 'warn-log' : 'info-log')"
+              th:text="${log.niveau}">INFO</span> :
+        <span th:text="${log.message}">Message</span>
+    </div>
+</div>
+
+
+<h2>Factures DLQ</h2>
+<div class="logs" id="dlq">
+    <div th:each="facture : ${factureDLQs}">
+        <span th:text="${facture}"></span>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    let batchStats = /*[[${batchStats}]]*/ [];
+    let singleStats = /*[[${singleStats}]]*/ [];
+
+    console.log("lliste batch"+batchStats.values())
+    console.log("liste single"+singleStats.values())
+</script>
+
+
+
+<script >
+
+    // Initialisation des courbes vides
+    const batchCtx = document.getElementById('batchChart').getContext('2d');
+    const singleCtx = document.getElementById('singleChart').getContext('2d');
+
+    const batchChart = new Chart(batchCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Temps / 100 messages (ms)', data: [], borderColor: 'blue', tension: 0.3 }] },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+    const singleChart = new Chart(singleCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Temps / 100 messages (ms)', data: [], borderColor: 'green', tension: 0.3 }] },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    // Fonction pour switcher le mode
+    function switchMode(mode) {
+        fetch(`/dashboard/mode?value=${mode}`, { method: 'POST' })
+            .then(resp => resp.text())
+            .then(data => {
+                logMessage(`Mode changé: ${mode} → ${data}`);
+            });
+    }
+
+    // Fonction pour simuler une exception
+    function simulateException() {
+        fetch(`/dashboard/exception`, { method: 'POST' })
+            .then(resp => resp.text())
+            .then(
+                logMessage("Simulation d'une exception déclenchée !")
+            );
+
+    }
+
+    // Ajouter des logs dynamiquement
+    function logMessage(msg) {
+        const logsDiv = document.getElementById('logs');
+        const timestamp = new Date().toLocaleTimeString();
+        logsDiv.innerHTML += `[${timestamp}] ${msg}<br>`;
+        logsDiv.scrollTop = logsDiv.scrollHeight; // Scroll automatique vers le bas
+    }
+
+    // Exemple : ajouter des données à une courbe
+    function addBatchData(label, value) {
+        batchChart.data.labels.push(label);
+        batchChart.data.datasets[0].data.push(value);
+        batchChart.update();
+        document.getElementById('batch-count').innerText = `Messages reçus: ${label}`;
+        document.getElementById('batch-time').innerText = `Temps traitement: ${value} ms`;
+    }
+
+    function addSingleData(label, value) {
+        singleChart.data.labels.push(label);
+        singleChart.data.datasets[0].data.push(value);
+        singleChart.update();
+        document.getElementById('single-time').innerText = `Temps pour 100 messages: ${value} ms`;
+    }
+
+    let batchIndex = 0;
+    batchStats.forEach(stat => {
+        batchIndex++;
+        addBatchData(`${stat.batchRecu} (${batchIndex})`, stat.timer);
+    });
+
+
+    let singleIndex = 0;
+    singleStats.forEach(stat => {
+        singleIndex++;
+        addSingleData(`100 (${singleIndex})`, stat.timer);
+    });
+
+
+</script>
+
+</body>
+</html>

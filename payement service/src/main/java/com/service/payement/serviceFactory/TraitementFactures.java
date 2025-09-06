@@ -1,5 +1,6 @@
-package com.service.payement.ServiceFactory;
+package com.service.payement.serviceFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.service.payement.dto.FactureKafka;
 import com.service.payement.model.Odr;
 import com.service.payement.repository.FactureRepository;
@@ -9,41 +10,33 @@ import com.service.payement.service.FacturePretraitement;
 import com.service.payement.service.PublierLog;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class TraitementFactures {
 
     private final OdrRepository oDRRepository;
-    private final FactureRepository factureRepository;
-    private final PublierLog publierLog;
     private final FacturePretraitement facturePretraitement;
     private final CalculMontant calculMontant;
+    private final PublierLog publierLog;
 
 
-    TraitementFactures(FactureRepository factureRepository , PublierLog  publierLog,
-                       FacturePretraitement facturePretraitement , CalculMontant calculMontant, OdrRepository oDRRepository) {
-        this.factureRepository = factureRepository;
-        this.publierLog = publierLog;
+    TraitementFactures(FacturePretraitement facturePretraitement ,
+                       CalculMontant calculMontant, OdrRepository oDRRepository, PublierLog publierLog) {
         this.facturePretraitement = facturePretraitement;
         this.calculMontant = calculMontant;
         this.oDRRepository = oDRRepository;
+        this.publierLog = publierLog;
     }
 
 
-    public void traitementFactures(String message) {
+    public void traitementFactures(String message , long i) throws JsonProcessingException {
 
         // pretraitement de message --> Liste de facture
-        FactureKafka[] listeFactures = facturePretraitement.extraireFacturesFromMessage(message);
-        //  Pub Log : N factures reçu
-        publierLog.publierLotFactureRecu(listeFactures.length);
-        int i = 0;
-        // pour chaque facture :
-        for (FactureKafka factureKafka : listeFactures) {
-            i++;
+        FactureKafka factureKafka = facturePretraitement.extraireFacturesFromMessageBatch(message);
+
             //Pub Log : facture n° i - Traitement commencer
-            publierLog.publierTraitementFactureStart(i);
+           publierLog.publierTraitementFactureStart(i);
             //ecrire la facture en bd
             List<Odr> Odrs = facturePretraitement.enregistrerFactureDataBD(factureKafka);
             //Pub Log : facture n° i - Enregistrer en bd
@@ -60,12 +53,10 @@ public class TraitementFactures {
                 odr.setMontant(montant);
                 oDRRepository.save(odr);
                 //Pub Log : facture n° i - Acte j - ODR enregistrer en bd
-                publierLog.publierSaveODR(j);
+                publierLog.publierSaveODR(odr);
 
             }
 
         }
-        System.out.println(message);
 
     }
-}

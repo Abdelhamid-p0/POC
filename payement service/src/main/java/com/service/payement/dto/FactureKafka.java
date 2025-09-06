@@ -1,5 +1,6 @@
 package com.service.payement.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,8 +10,7 @@ import java.util.ArrayList;
 @Setter
 public class FactureKafka {
     String organisation;
-    String benificiareNom;
-    String benificiarePrenom;
+    String benificiare;
     String prof_sante;
     ArrayList<String> actes;
     String date;
@@ -20,8 +20,7 @@ public class FactureKafka {
     public String toString() {
         return "Facture{" +
                 "organisation='" + organisation + '\'' +
-                ", benificiareNom='" + benificiareNom + '\'' +
-                ", benificiarePrenom='" + benificiarePrenom + '\'' +
+                ", benificiare='" + benificiare + '\'' +
                 ", prof_sante='" + prof_sante + '\'' +
                 ", actes=" + actes +
                 ", date=" + date +

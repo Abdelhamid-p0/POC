@@ -23,58 +23,64 @@
     <!-- Affichage du résultat -->
     <div th:if="${success != null}">
         <div th:if="${success}" class="success">
-            ✅ <span th:text="${message}">Envoie de Factures réussi !</span><br>
-            <strong>nombre de facture:</strong> <span th:text="${nbrFactures}"></span><br>
-            <strong>nombre de facture eronnées:</strong> <span th:text="${nbrFacturesErr}"></span>
+            ✅ <span th:text="${message}">Envoi de factures réussi !</span><br>
+            <strong>Nombre de factures :</strong> <span th:text="${nbrFactures}"></span><br>
+            <strong>Nombre de factures erronées :</strong> <span th:text="${nbrFacturesErr}"></span>
         </div>
         <div th:unless="${success}" class="error">
             ❌ <span th:text="${message}">Erreur</span><br>
-            Veuillez ressayé !!
+            Veuillez réessayer !!
         </div>
     </div>
 
     <!-- Formulaire de paiement -->
     <form action="/facture" th:object="${facture}" method="post">
         <div class="form-group">
-            <label for="organ">🏦 Organisation:</label>
+            <label for="organ">🏦 Organisation :</label>
             <input type="text" id="organ" th:field="*{organisation}" required
                    placeholder="Entrez le nom de l'organisation"/>
         </div>
 
         <div class="form-group">
-            <label for="benif">👤 Nom du bénificiaire:</label>
+            <label for="benif">👤 Nom du bénéficiaire :</label>
+            <div class="note">(Saisir "admin" sinon une exception sera levée
+                et les factures seront envoyées vers la DLQ)</div>
+
             <input type="text" id="benif" th:field="*{benificiare}" required
-                   placeholder="entre le nom complet d bénificiaire"/>
+                   placeholder="Entrez le nom complet du bénéficiaire"/>
         </div>
 
         <div class="form-group">
-            <label for="prof_sante"> Professionel de santé:</label>
+            <label for="prof_sante">💼 Professionnel de santé :</label>
             <input type="text" id="prof_sante" th:field="*{prof_sante}" required
-                   placeholder="Professionel de santé"/>
+                   placeholder="Professionnel de santé"/>
         </div>
 
-
         <div class="form-group">
-            <div th:each="acte : ${listeActes}">
-                <input type="checkbox"  th:value="${acte}"  th:field="*{actes}"
-                       placeholder="Les lignes d'actes "/>
-
-                <span th:text="${acte}">acte</span>
+            <label>📋 Actes :</label>
+            <div class="checkbox-group" th:each="acte : ${listeActes}">
+                <input type="checkbox" th:value="${acte}" th:field="*{actes}"/>
+                <span th:text="${acte}"></span>
             </div>
+            <div class="note">Cocher l'acte "ocg" pour lever une SQLException.</div>
         </div>
 
         <div class="form-group">
-            <label for="date"> Dat de soin :</label>
+            <label for="date">📅 Date de soin :</label>
             <input type="text" id="date" th:field="*{date}" required
                    placeholder="Date de soin aaaa/mm/jj"/>
         </div>
 
+        <div class="form-group">
+            <input type="checkbox" id="isSimulerErreur" name="isSimulerErreur" th:checked="${isSimulerErreur}"/>
+            <label for="isSimulerErreur">📌 Simuler des factures erronées (messages 20 et 90)</label>
+        </div>
 
-        <button type="submit">Publier Maintenant</button>
+        <button type="submit">Publier maintenant</button>
     </form>
 
     <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
-        🔒 Envoie de factures !!
+        🔒 Envoi de factures
     </div>
 </div>
 </body>

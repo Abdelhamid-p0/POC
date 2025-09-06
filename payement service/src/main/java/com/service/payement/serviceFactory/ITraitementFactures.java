@@ -1,4 +1,4 @@
-package com.service.payement.ServiceFactory;
+package com.service.payement.serviceFactory;
 
 import org.springframework.stereotype.Service;
 

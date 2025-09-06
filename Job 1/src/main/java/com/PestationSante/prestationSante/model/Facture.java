@@ -10,7 +10,6 @@ public class Facture {
     ArrayList<String> actes;
     String date;
 
-
     @Override
     public String toString() {
         return "Facture{" +

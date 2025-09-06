@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: gestion_facture
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: abdo
+    ports:
+      - "5432:5432"
+    networks:
+      - mynet
+
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
+    networks:
+      - mynet
+
+  job1:
+    build: ./Job 1
+    container_name: spring_job1
+    depends_on:
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - mynet
+
+  payement-service:
+    build: ./payement service
+    container_name: spring_payement_service
+    depends_on:
+      - postgres
+      - kafka
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gestion_facture
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: abdo
+    ports:
+      - "8081:8081"
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    driver: bridge
